@@ -1,0 +1,298 @@
+1.前后端分离
+	- 不分离，后台系统&用户量少
+	-   分离，用户系统&专业人士
+
+	路飞学城：
+		- Web平台，前端开发 + 后端开发 => 前后端分离
+		- 管理后台，不分离
+		- 导师后台，不分离
+
+2.django的FBV和CBV
+	- FBV，函数
+	- CBV，类+反射 => 请求方法不同执行类中的不同方法。
+
+3.drf->CBV
+	
+	View
+		- 10
+	APIView(View)
+		- 20
+	class UserInfo(APIView):
+		-> 调用30个功能
+
+4.创建项目
+	- 默认项目 + app
+	- 纯净版项目
+		- app	
+			INSTALLED_APPS = [
+			    # 'django.contrib.admin',
+			    # 'django.contrib.auth',
+			    # 'django.contrib.contenttypes',
+			    # 'django.contrib.sessions',
+			    # 'django.contrib.messages',
+			    'django.contrib.staticfiles',
+			    'rest_framework',  # template/static
+			]
+		- drf
+			REST_FRAMEWORK = {
+			    "UNAUTHENTICATED_USER": None
+			}
+		- url -> 视图类
+
+5.request对象
+	- oop知识 -> 搞定
+	- drf请求流程
+	- 请求参数
+		 *args, **kwargs
+		 v1,v2,v3
+
+6.认证组件
+	- 直接用，用户授权
+		示例1：
+			- 100个API，1个无需登录就能访问；99需要登录才能访问。
+			- 实现
+				- 编写类 -> 认证组件
+				- 应用组件（局部）
+		示例2：
+			- 100个API，1个无需登录就能访问；99需要登录才能访问。（全局配置）
+			- 实现
+				- 编写类 -> 认证组件
+				- 应用组件（全局）
+					# ############## drf配置 ###############
+					REST_FRAMEWORK = {
+					    "UNAUTHENTICATED_USER": None,
+					    "DEFAULT_AUTHENTICATION_CLASSES": ["api.views.MyAuthentication", ]
+					}
+
+		注意：认证组件不能写在view视图中。
+
+	- 面向对象-继承
+		class APIView(object):
+			authentication_classes = 读取配置文件中的列表
+
+			def dispatch(self):
+				self.authentication_classes
+
+
+		class UserView(APIView):
+			# authentication_classes = [11,22,3,44]
+
+		obj = UserView()
+		obj.dispatch()
+
+	- 认证组件源码
+		- 加载认证组件，本质就是实例化每个认证类的对象，并封装到request对象。
+
+	- 知识点
+		- 多个认证类
+			- 都返回None，都没有认证成功 -> 视图是否会被执行？ 视图函数会执行，只不过 self.user   self.auth = None
+			- 案例：
+
+				class URLAuthentication(BaseAuthentication):
+				    def authenticate(self, request):
+				        token = request.query_params.get("token")
+				        if token:
+				            return "wupeiqi", token
+
+				        return 
+
+
+				class HeaderAuthentication(BaseAuthentication):
+				    def authenticate(self, request):
+				        token = request.meta.get("xxxxx")
+				        if token:
+				            return "wupeiqi", token
+
+				        return 
+
+
+				class BodyAuthentication(BaseAuthentication):
+				    def authenticate(self, request):
+				        token = request.data.get("xxxxx")
+				        if token:
+				            return "wupeiqi", token
+
+				        return 
+
+				class NoAuthentication(BaseAuthentication):
+				    def authenticate(self, request):
+				        raise 异常认证失败
+
+
+				class OrderView(APIView):
+				    authentication_classes = [URLAuthentication,HeaderAuthentication,BodyAuthentication ,NoAuthentication]
+
+				    def get(self, request):
+				        print(request.user, request.auth)
+				        return Response("OrderView")
+
+		- 状态码一致
+
+
+	- 扩展，python开发常见 ->子类的约束。
+
+案例：用户登录+用户认证   [day13-1.zip]
+	POST   http://127.0.0.1:8000/login/      用户名和密码    -> JSON
+
+		   {"username":"wupeiqi","password":"123123","xxx":{"xx":123}}
+
+		   {
+			    "status": true,
+			    "data": "712e21c2-a4ea-416e-98da-7fe923c39ef4"
+		    }
+
+    GET    http://127.0.0.1:8000/user/    头或URL ->携带token
+
+7.权限组件
+	
+	认证组件 = [认证类,认证类,认证类,]    -> 执行每个认证类中的authenticate方法；
+										    - 认证成功或失败，不会在执行后续的认证类
+										    - 返回None，执行后续的认证类。
+	-------------------------------------------------------------------------------------------------
+    项目中某个请求必须满足：A条件、B条件、C条件。
+    权限组件 = [权限类,权限类,权限类..]   -> 执行所有权限类的has_permission方法，返回True通过、返回False表示不通过。
+    										- 执行所有的权限类
+
+    									 默认情况下，保证所有的权限类中的ahas_permission方法都返回True 。
+    --------------------------------------------------------------------------------------------------
+	项目中某个请求必须满足：A条件、B条件、C条件。
+    权限组件 = [权限类,权限类,权限类..]   -> 执行所有权限类的has_permissiont方法，返回True通过、返回False表示不通过。
+    										- 执行所有的权限类
+
+    									 学会源码流程，扩展+自定义。
+    --------------------------------------------------------------------------------------------------
+
+    应用：
+    	- 类
+    	- 应用（局部+全局应用）
+    应用场景： 经理角色、当前订单是他的手下创建
+    默认权限组件：必须满足：A条件、B条件、C条件。
+
+
+    整改：满足任意条件：A条件、B条件、C条件。   => 扩展   （ 源码编写方式+N个扩展点+分析+不用记代码  ）
+
+案例：用户登录+用户认证+角色+扩展案例  [day13-2.zip]
+
+
+思考题：开发过程中，发现drf中的request对象不好用，换成另外一个request类实例的话对象。
+思考题：drf中的认证、权限组件 与 django中的中间件有什么关系？
+
+
+8.限流组件
+	开发过程中，某个接口不想让用户访问过于频繁，限流机制， 例如：平台显示1小时发10次、IP限制、验证码、防止爬虫。
+	限制访问频率：
+		- 已登录用户，用户信息主键、ID、用户名
+		- 未登录，IP为唯一表示
+	
+	如何限制？  10分钟3次
+		  标识                              访问记录（redis）
+		 "9123123"                   [16：45, 16:43, 16:42, ]
+
+		throttle_XXX_11.11.11.11     [16：45, 16:43, 16:42, ]
+
+		1.获取当前时间 16：45
+		2.当前时间-10分钟=计数开始时间  16:35
+		3.删除小于16:35
+		4.计算长度
+			- 超过，错误
+			- 未超，访问
+
+	使用： [day13-3.zip]
+		- 编写类
+			1.编写类
+			2.安装django-redis配置 ->settings.py
+			3.安装django-redis
+			4.启动redis服务
+
+		- 应用类
+			5.局部应用
+
+
+	源码和具体实现：
+
+		1.对象加载
+			获取每个限流类的对象，初始化（读取限制的配置，获取到 时间间隔+访问次数） --> num_requests,  duration
+
+
+		2.allow_request是否限流
+			...
+
+案例：用户登录+用户认证+角色+扩展案例 + 限流 [day13-4.zip]
+	
+	- 无序登录，限流 1分钟10次
+	- 需要登录 ，BossPermission
+
+
+任务：
+	1.限流自定义错误提示
+	2.拆分知识点
+		- getattr
+		- getatrribute
+		- 继承
+	3.request封装 + 认证 + 权限 + 限流 => 文章+流程图
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

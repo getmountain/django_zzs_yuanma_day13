@@ -1,0 +1,48 @@
+关于oop
+
+class Foo(object):
+	def __init__(self,name,age):
+		self.name = name
+		self.age = age
+
+
+obj = Foo("任刚",19)
+obj.name
+obj.age
+
+1.类中的__getattr__什么时候触发？
+	class Foo(object):
+	    def __init__(self, name, age):
+	        self.name = name
+	        self.age = age
+
+	    def show(self):
+	        return 123
+
+	    def __getattr__(self, item):
+	        print("---->", item)
+	        return 999
+
+
+	obj = Foo("任刚", 19)
+	# 不触发 __getattr__
+	# obj.name
+	# obj.age
+	# obj.show()
+
+	# 触发 __getattr__（不存在成员）
+	# print(obj.xxxxx)
+	# v2 = getattr(obj,"xxxxx")
+	# print(v2)
+
+
+2.类中的__getattribute__什么时候触发？
+	- 只要执行 对象.xxxx都会执行 __getattribute__
+	- object中的 __getattribute__ 在内部处理机制：
+		- 对象中有值，返回
+		- 对象中午值，报错
+
+
+3.类分析
+
+	
